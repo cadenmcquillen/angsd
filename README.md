@@ -1,1 +1,2 @@
 # angsd
+For ANGSD assignments
