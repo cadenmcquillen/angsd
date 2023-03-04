@@ -1,0 +1,267 @@
+---
+title: "Hw5"
+author: "Caden McQuillen"
+date: '2023-02-09'
+output:
+  html_document:
+    toc: yes
+---
+
+## Question 1
+```{bash, eval = FALSE}
+cd /home/cnm4001/angsd_hw/ 
+mkdir hw5 #create new directory for hw5
+mv /home/cnm4001/angsd_hw/hw4/WT2 /home/cnm4001/angsd_hw/hw5 #move WT2 samples over for convenience
+cd hw5
+mkdir STAR_BWA #make directory for alignment output
+cd STAR_BWA
+mkdir STAR_alignments #sub directory for STAR and BWA
+mkdir BWA_alignments
+```
+
+
+```{bash, eval = FALSE}
+#! /bin/bash -l
+
+#SBATCH --partition=angsd_class
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --job-name=test
+#SBATCH --time=6:00:00 # to be safe, 6hrs
+#SBATCH --mem=20G
+
+
+cd /home/cnm4001/angsd_hw/hw5/WT2
+mamba activate angsd
+
+#loop through fastq of replicates of WT2
+for index in 78 79 80 81 82 83 84; do
+ #$File=(ERR4588${index}_fastq.gz)
+
+  STAR --runMode alignReads \
+       --runThreadN 1 \
+       --genomeDir ~luce/angsd/referenceGenomes/sacCer3_STARindex \
+       --readFilesIn ERR4588${index}.fastq.gz \
+       --readFilesCommand zcat \
+       --outFileNamePrefix /home/cnm4001/angsd_hw/hw5/STAR_BWA/STAR_alignments/ERR4588${index}. \
+       --outSAMtype BAM SortedByCoordinate
+
+
+  samtools index /home/cnm4001/angsd_hw/hw5/STAR_BWA/STAR_alignments/ERR4588${index}.Aligned.sortedByCoord.out.bam
+
+  bwa mem ~luce/angsd/referenceGenomes/sacCer3_BWAindex/sacCer3 ERR4588${index}.fastq.gz  > /home/cnm4001/angsd_hw/hw5/STAR_BWA/BWA_alignments/ERR4588${index}.bwa.sam
+
+  samtools view -b /home/cnm4001/angsd_hw/hw5/STAR_BWA/BWA_alignments/ERR4588${index}.bwa.sam -o /home/cnm4001/angsd_hw/hw5/STAR_BWA/BWA_alignments/ERR4588${index}.bwa.bam
+
+  samtools sort /home/cnm4001/angsd_hw/hw5/STAR_BWA/BWA_alignments/ERR4588${index}.bwa.bam -o /home/cnm4001/angsd_hw/hw5/STAR_BWA/BWA_alignments/ERR4588${index}.bwa.sorted.bam
+  vi
+  samtools index /home/cnm4001/angsd_hw/hw5/STAR_BWA/BWA_alignments/ERR4588${index}.bwa.sorted.bam -o /home/cnm4001/angsd_hw/hw5/STAR_BWA/BWA_alignments/ERR4588${index}.bwa.sorted.bam.bai
+
+  rm /home/cnm4001/angsd_hw/hw5/STAR_BWA/BWA_alignments/ERR4588${index}.bwa.sam
+  rm /home/cnm4001/angsd_hw/hw5/STAR_BWA/BWA_alignments/ERR4588${index}.bwa.bam
+done
+
+
+```
+
+## Question 2
+```{bash, eval = FALSE}
+#! /bin/bash -l
+
+#SBATCH --partition=angsd_class
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --job-name=test
+#SBATCH --time=00:10:00 # HH/MM/SS
+#SBATCH --mem=6G
+
+
+cd /home/cnm4001/angsd_hw/hw5/STAR_BWA/STAR_alignments
+mamba activate angsd
+
+cat > ChrI.txt
+#loop through STAR alignments
+for index in 78 79 80 81 82 83 84; do
+  samtools view ERR4588${index}.Aligned.sortedByCoord.out.bam | egrep "chrI" | egrep "NH:i:1" | cat >> ChrI.txt
+done
+
+
+cd /home/cnm4001/angsd_hw/hw5/STAR_BWA/STAR_alignments
+head ChrI.txt 
+ERR458878.639529	16	chrI	3576	255	51M	*	0	0	ACAAGTACAAAATTAGGTTTGTTGAAACAACTTTCCGATCATTGGTGCCCG	#D@D?/04B?<DDB9;BB;C:1**CDECDEEF@E8EC4??CA8?B0A++1=	NH:i:1	HI:i:1	AS:i:50	nM:i:0
+ERR458878.1165010	16	chrI	4032	255	51M	*	0	0	TTATGTAGTTCAACATCAAATGTGTCTATTTTGTGATGAGGCAACCGTCGA	IJJIIIIIIJIJJIIEJJJIGJJIGHIJIJIHGIIIIJHHHHHDFFFD@CB	NH:i:1	HI:i:1	AS:i:50	nM:i:0
+ERR458878.777693	16	chrI	4033	255	51M	*	0	0	TATGTAGTTCAACATCAAATGTGTCTATTTTGTGATGAGGCAACCGTCGAC	HJIJJJJJIIIIEGIIIJIJJIIIJJJJJJJJJJJJJIHHHHHFFFFD@BB	NH:i:1	HI:i:1	AS:i:50	nM:i:0
+ERR458878.1053260	16	chrI	4310	255	51M	*	0	0	AATAGTTCTAAAAAGCCACTACATGACAAGCAACTCATAATTTAAGTGGAT	B??0**0))11*GB7EEAB@HCGHAC@IHEGHHIGIIIHHGHHFFDDA?;@	NH:i:1	HI:i:1	AS:i:44	nM:i:3
+ERR458878.780335	0	chrI	5094	255	51M	*	0	0	TTTGTATATGAAAGATGTTTATACATCAAATGCTTTGAATAAAGCCATCTT	B=:BDEFDHHHHHJIJJIIJIJJJJJJJJJJJJJJJJIJJJJJJJJJJJJI	NH:i:1	HI:i:1	AS:i:50	nM:i:0
+ERR458878.728081	16	chrI	5316	255	51M	*	0	0	GCCTCTAATCAGTTCCATTAAGAAATCTTCTTAACTCCTCCAAATATTCTG	IIFJJJJIGIJIHFIJJJGHGHJJJJJJJIJIHHIGIHDGHHHFFFDD@@B	NH:i:1	HI:i:1	AS:i:50	nM:i:0
+ERR458878.722510	0	chrI	5325	255	51M	*	0	0	CAGTTCCATTAAGAAATCTTCTTAACTCCTCCAAATATTCTGCCCATACGA	CCCDFFFFHHHHHIJJJJJJJJJ:><AFHHIJJJJJJJJIJIJIJJJIHIG	NH:i:1	HI:i:1	AS:i:50	nM:i:0
+ERR458878.669725	16	chrI	5479	255	47M4S	*	0	0	TAACTCCTAAACTTTGTCATAATGGTTGAAATGAATGTATGATATAATGGC	##B?*:<GC?*F?@GDHA2AC<GC?HDA?CA<3CA3<:C:A?FD?A4+11=	NH:i:1	HI:i:1	AS:i:46	nM:i:0
+ERR458878.307136	0	chrI	5485	255	51M	*	0	0	CTAAACTTTGTCATAATGGTTGAAATGAATGTATGATATAAAAACTCGGAC	@@@+4BDFHHBFHIGGIGHIFGHIIIIIGGIIIGHIGEGGHGGDCHEIIIF	NH:i:1	HI:i:1	AS:i:50	nM:i:0
+ERR458878.601671	0	chrI	5515	255	51M	*	0	0	GTATGATATAAAAACTCGGACCCTGTTTTACTTCTTTTATAGAACCTTATT	BCCFFFFFHHHHHJJIJJIJJJIJJIIJIIIJIJJJJJIIGIHIJJJJJJI	NH:i:1	HI:i:1	AS:i:50	nM:i:0
+
+```
+I wasn't sure if the question meant any read that maps to chromosome I in any of its alignments or any read that maps ONLY to chromosome I (the read only maps somewhere in chromosome I and no where else in the genome). In the case of the former here is the same script but without the NH:i:1 requirement. 
+```{bash, eval = FALSE}
+
+#! /bin/bash -l
+
+#SBATCH --partition=angsd_class
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --job-name=test
+#SBATCH --time=00:10:00 # HH/MM/SS
+#SBATCH --mem=6G
+
+
+cd /home/cnm4001/angsd_hw/hw5/STAR_BWA/STAR_alignments
+mamba activate angsd
+
+cat > ChrI_version2.txt
+#loop through STAR alignments
+for index in 78 79 80 81 82 83 84; do
+  samtools view ERR4588${index}.Aligned.sortedByCoord.out.bam | egrep "chrI" | cat >> ChrI_version2.txt
+done
+
+cd /home/cnm4001/angsd_hw/hw5/STAR_BWA/STAR_alignments
+head ChrI_version2.txt 
+ERR458878.358902	256	chrI	1796	0	51M	*	0	0	GGTGTTTGTCTCTAGTTTGCGATAGTGTAGATACCGTCCTTGGATAGAGCA	:?1A=BDEFBFFHIGDHEGCH>HEEEGG>CGEIDHGDGGEHGFGH@FGFH>	NH:i:6	HI:i:5	AS:i:48	nM:i:1
+ERR458878.734755	272	chrI	1866	0	51M	*	0	0	ATCTGCTGGAGTACCATGGAACACCGGTGATCCTTCTGGTCACTTGGTCTG	HIJIJJJJJJIIGJJJIIJHHHHJJJJJIHGC+JJJJJHHHHHFFFFFCCC	NH:i:8	HI:i:2	AS:i:48	nM:i:1
+ERR458878.650235	272	chrI	1868	0	50M1S	*	0	0	CTGCTGGAGTACCATGGAACACCGGTGATCATTCTGGTCACTTCGTCCGGG	IGIIIHGHCB8GIIIIGHF@8EGGFBGHGEGIGHGHGHDCFC<)DDDA<;8	NH:i:8	HI:i:5	AS:i:45	nM:i:2
+ERR458878.394962	16	chrI	1943	0	51M	*	0	0	AAGTCACCGTAGTTGAAAACGGCTTCAGCAACTTCGACTGGGTAGGTTTCA	BIFED?GCIGGGFD?6G@HGHA<GFGF@<F?GIIHFE=>HFCBB>DDD<@@	NH:i:7	HI:i:1	AS:i:50	nM:i:0
+ERR458878.325345	16	chrI	1944	0	51M	*	0	0	AGTCACCGTAGTTGAAAACGGCTTCAGCAACTTCGACTGGGTAGGTTTCAG	GHGFBGGIIGIGAGIGGGGJFJJJJJJJGGJJIIGFJIHHHHHFFFFD??B	NH:i:7	HI:i:1	AS:i:50	nM:i:0
+ERR458878.1021901	16	chrI	1960	0	51M	*	0	0	AACGGCTTCAGCAACTTCGACTGGGTAGGTTTCAGTTGGGTGGGCGGCTTG	HGJJJJJIJIIIIGJJIJIGJIIJJJJJJIJJJIJIJJHHHHHFFFFFCCC	NH:i:5	HI:i:1	AS:i:50	nM:i:0
+ERR458878.344494	256	chrI	1964	0	51M	*	0	0	GCTTCAGCAACTTCGACTGGGTAGGTTTCAGTTGGGTGGGCGGCTTGGAAC	?<+=BDFFFHGHHFHIIGJIGBHDFCDFFDE?FGIIDGHI?FHFFEBDEEC	NH:i:5	HI:i:5	AS:i:50	nM:i:0
+ERR458878.701923	256	chrI	1968	0	51M	*	0	0	CAGCAACTTCGACTGGGTAGGTTTCAGGTGGGTGGGCGGCTTGGAACATGT	CCCFFFFFHHHDFIJJJAEGH?FHHFH?EHIJ:DFHIJJHBDCDCEEDDDC	NH:i:5	HI:i:5	AS:i:48	nM:i:1
+ERR458878.1380772	256	chrI	1970	0	51M	*	0	0	GCAACTTCGACTGGGTAGGTTTCAGTTGGGTGGGCGGCTTGGAACATGTAG	CCCFFFFFHHHHHIJCGHJFHIIGIFHIJIGGIJIJJBHHDDDDFEEEEED	NH:i:5	HI:i:5	AS:i:50	nM:i:0
+ERR458878.1121258	272	chrI	2122	1	51M	*	0	0	AGCAGCGATGGCAGCGACACCAGCGGCGATTGAAGTTAATTTGACCATTGT	@HHDGAFDF?::FGIIIIGGGHGIHGGEF@?<HBIIIHFD=?DABDA7<@?	NH:i:4	HI:i:4	AS:i:50	nM:i:0
+
+```
+
+
+
+## Question 3
+
+```{bash, eval =FALSE}
+#look at STAR output
+cd /home/cnm4001/angsd_hw/hw5/STAR_BWA/STAR_alignments
+
+mamba activate angsd
+(angsd) [cnm4001@buddy STAR_alignments]$ samtools view ERR458878.Aligned.sortedByCoord.out.bam | head
+ERR458878.358902	256	chrI	1796	0	51M	*	0	0	GGTGTTTGTCTCTAGTTTGCGATAGTGTAGATACCGTCCTTGGATAGAGCA	:?1A=BDEFBFFHIGDHEGCH>HEEEGG>CGEIDHGDGGEHGFGH@FGFH>	NH:i:6	HI:i:5	AS:i:48	nM:i:1
+ERR458878.734755	272	chrI	1866	0	51M	*	0	0	ATCTGCTGGAGTACCATGGAACACCGGTGATCCTTCTGGTCACTTGGTCTG	HIJIJJJJJJIIGJJJIIJHHHHJJJJJIHGC+JJJJJHHHHHFFFFFCCC	NH:i:8	HI:i:2	AS:i:48	nM:i:1
+ERR458878.650235	272	chrI	1868	0	50M1S	*	0	0	CTGCTGGAGTACCATGGAACACCGGTGATCATTCTGGTCACTTCGTCCGGG	IGIIIHGHCB8GIIIIGHF@8EGGFBGHGEGIGHGHGHDCFC<)DDDA<;8	NH:i:8	HI:i:5	AS:i:45	nM:i:2
+ERR458878.394962	16	chrI	1943	0	51M	*	0	0	AAGTCACCGTAGTTGAAAACGGCTTCAGCAACTTCGACTGGGTAGGTTTCA	BIFED?GCIGGGFD?6G@HGHA<GFGF@<F?GIIHFE=>HFCBB>DDD<@@	NH:i:7	HI:i:1	AS:i:50	nM:i:0
+ERR458878.325345	16	chrI	1944	0	51M	*	0	0	AGTCACCGTAGTTGAAAACGGCTTCAGCAACTTCGACTGGGTAGGTTTCAG	GHGFBGGIIGIGAGIGGGGJFJJJJJJJGGJJIIGFJIHHHHHFFFFD??B	NH:i:7	HI:i:1	AS:i:50	nM:i:0
+ERR458878.1021901	16	chrI	1960	0	51M	*	0	0	AACGGCTTCAGCAACTTCGACTGGGTAGGTTTCAGTTGGGTGGGCGGCTTG	HGJJJJJIJIIIIGJJIJIGJIIJJJJJJIJJJIJIJJHHHHHFFFFFCCC	NH:i:5	HI:i:1	AS:i:50	nM:i:0
+ERR458878.344494	256	chrI	1964	0	51M	*	0	0	GCTTCAGCAACTTCGACTGGGTAGGTTTCAGTTGGGTGGGCGGCTTGGAAC	?<+=BDFFFHGHHFHIIGJIGBHDFCDFFDE?FGIIDGHI?FHFFEBDEEC	NH:i:5	HI:i:5	AS:i:50	nM:i:0
+ERR458878.701923	256	chrI	1968	0	51M	*	0	0	CAGCAACTTCGACTGGGTAGGTTTCAGGTGGGTGGGCGGCTTGGAACATGT	CCCFFFFFHHHDFIJJJAEGH?FHHFH?EHIJ:DFHIJJHBDCDCEEDDDC	NH:i:5	HI:i:5	AS:i:48	nM:i:1
+ERR458878.1380772	256	chrI	1970	0	51M	*	0	0	GCAACTTCGACTGGGTAGGTTTCAGTTGGGTGGGCGGCTTGGAACATGTAG	CCCFFFFFHHHHHIJCGHJFHIIGIFHIJIGGIJIJJBHHDDDDFEEEEED	NH:i:5	HI:i:5	AS:i:50	nM:i:0
+ERR458878.1121258	272	chrI	2122	1	51M	*	0	0	AGCAGCGATGGCAGCGACACCAGCGGCGATTGAAGTTAATTTGACCATTGT	@HHDGAFDF?::FGIIIIGGGHGIHGGEF@?<HBIIIHFD=?DABDA7<@?	NH:i:4	HI:i:4	AS:i:50	nM:i:0
+
+
+
+cd ..
+cd BWA_alignments
+
+samtools view ERR458878.bwa.sorted.bam | head
+ERR458878.734755	16	chrI	1866	0	51M	*	0	0	ATCTGCTGGAGTACCATGGAACACCGGTGATCCTTCTGGTCACTTGGTCTG	HIJIJJJJJJIIGJJJIIJHHHHJJJJJIHGC+JJJJJHHHHHFFFFFCCC	NM:i:1	MD:Z:32A18	AS:i:46	XS:i:46
+ERR458878.650235	16	chrI	1868	0	43M8S	*	0	0	CTGCTGGAGTACCATGGAACACCGGTGATCATTCTGGTCACTTCGTCCGGG	IGIIIHGHCB8GIIIIGHF@8EGGFBGHGEGIGHGHGHDCFC<)DDDA<;8	NM:i:0	MD:Z:43	AS:i:43	XS:i:43
+ERR458878.1292367	16	chrI	1928	0	51M	*	0	0	GTCAACATGGTGGTGAAGTCACCGTAGTTGAAAACGGCTTCAGCAACTTCG	FB>AFBB?)FCCAGGC?9?:)8)1?<+>C?EE<G@E?GFFFDFB8DDD@@?	NM:i:0	MD:Z:51	AS:i:51	XS:i:51
+ERR458878.394962	16	chrI	1943	0	51M	*	0	0	AAGTCACCGTAGTTGAAAACGGCTTCAGCAACTTCGACTGGGTAGGTTTCA	BIFED?GCIGGGFD?6G@HGHA<GFGF@<F?GIIHFE=>HFCBB>DDD<@@	NM:i:0	MD:Z:51	AS:i:51	XS:i:51
+ERR458878.1380772	0	chrI	1970	0	51M	*	0	0	GCAACTTCGACTGGGTAGGTTTCAGTTGGGTGGGCGGCTTGGAACATGTAG	CCCFFFFFHHHHHIJCGHJFHIIGIFHIJIGGIJIJJBHHDDDDFEEEEED	NM:i:0	MD:Z:51	AS:i:51	XS:i:51
+ERR458878.280101	16	chrI	2505	0	51M	*	0	0	GCCTTATAAAACCCTTTTCTGTGCCTGTGACATTTCCTTTTTCGGTCAAAA	IIJJJJJJIGDJJIJJJIJIJJIJIJJJJIJJJJJJJJHHHHHFFFFFCCC	NM:i:0	MD:Z:51	AS:i:51	XS:i:51	XA:Z:chrIX,+433541,51M,0;chrVII,-6990,51M,0;chrXI,-2519,51M,0;
+ERR458878.639529	16	chrI	3576	60	51M	*	0	0	ACAAGTACAAAATTAGGTTTGTTGAAACAACTTTCCGATCATTGGTGCCCG	#D@D?/04B?<DDB9;BB;C:1**CDECDEEF@E8EC4??CA8?B0A++1=	NM:i:0	MD:Z:51	AS:i:51	XS:i:0
+ERR458878.1165010	16	chrI	4032	60	51M	*	0	0	TTATGTAGTTCAACATCAAATGTGTCTATTTTGTGATGAGGCAACCGTCGA	IJJIIIIIIJIJJIIEJJJIGJJIGHIJIJIHGIIIIJHHHHHDFFFD@CB	NM:i:0	MD:Z:51	AS:i:51	XS:i:0
+ERR458878.777693	16	chrI	4033	60	51M	*	0	0	TATGTAGTTCAACATCAAATGTGTCTATTTTGTGATGAGGCAACCGTCGAC	HJIJJJJJIIIIEGIIIJIJJIIIJJJJJJJJJJJJJIHHHHHFFFFD@BB	NM:i:0	MD:Z:51	AS:i:51	XS:i:0
+ERR458878.1053260	16	chrI	4310	58	51M	*	0	0	AATAGTTCTAAAAAGCCACTACATGACAAGCAACTCATAATTTAAGTGGAT	B??0**0))11*GB7EEAB@HCGHAC@IHEGHHIGIIIHHGHHFFDDA?;@	NM:i:3	MD:Z:5C3T1C39	AS:i:39	XS:i:0
+```
+STAR SAM optional fields: NH:i (the number of reported alignments for query sequence), HI:i (Query is the i-th hit stored in the file), AS:i (Local Alignment score), nM:i (Number of mismatches per alignment) <br>
+BWA SAM optional fields: NM:i (edit distance of query to reference), MD:Z (String that codes recovery reference sequence with exact position of mismatches, ie 5C3T1C39 = 5 matches -> C -> 3 matches -> T -> 1 match -> C -> 39 matches), AS:i (Alignment score), XS:i (sub optimal alignment score) XA:z (additional details about alignment )
+
+## Question 4
+
+```{bash, eval = FALSE}
+cd /home/cnm4001/angsd_hw/hw5/STAR_BWA/STAR_alignments
+mkdir STAR_bamqc
+/softlib/apps/EL7/BamQC/bin/bamqc /home/cnm4001/angsd_hw/hw5/STAR_BWA/STAR_alignments/ -outdir /home/cnm4001/angsd_hw/hw5/STAR_BWA/STAR_alignments/STAR_bamqc
+
+cd /home/cnm4001/angsd_hw/hw5/STAR_BWA/BWA_alignments
+mkdir BWA_bamqc
+/softlib/apps/EL7/BamQC/bin/bamqc /home/cnm4001/angsd_hw/hw5/STAR_BWA/BWA_alignments/ -outdir /home/cnm4001/angsd_hw/hw5/STAR_BWA/BWA_alignments/BWA_bamqc
+
+
+#on local machine
+scp cnm4001@aphrodite.med.cornell.edu:/home/cnm4001/angsd_hw/hw5/STAR_BWA/STAR_alignments/STAR_bamqc/ERR458878.Aligned.sortedByCoord.out_bamqc.html  .
+scp cnm4001@aphrodite.med.cornell.edu:/home/cnm4001/angsd_hw/hw5/STAR_BWA/BWA_alignments/BWA_bamqc/ERR458878.bwa.sorted_bamqc.html  .
+
+
+
+
+
+
+```
+BWA bamqc has SNP frequency information whereas the STAR bamqc does not. The two also produce different soft clip length distributions. Lastly, they produce different Indel frequencies. BWA has a large peak at 4bp into the read and then leveling off to a low level whereas STAR has a normal-ish looking distribution of indels centered around 27 bp. 
+
+## Question 5
+
+Alignment score (AS) tells you how similar the read is to the reference. Alignment score will increase for every match and decrease for mismatches and gaps, the exact score will depend on the reward set for matches and penalty set for gaps/mismatches. <br>
+Mapping quality (MAPQ) tells you how the confidence of the alignment for that read to that section of the reference, -10log10Pr(mapping position is incorrect). I believe there are multiple methods for determine probability of incorrect mapping so it will depend on your experiment and aligner you used. It is also difficult to compare across aligners since they can calculate MAPQ scores differently. For example BWA mem has max MAPQ score of 60 whereas STAR uses 255 for uniquely mapping reads and -10*log(1- (1/Nmap)) for multi mapped reads where Nmap is the number of loci a read maps to. <br>
+
+
+
+
+
+## Question 6 
+A multi-mapping read is a read that maps to more than 1 location in the reference. A split read is a read that maps partially to one location of the genome and partially to another, in other words its not a contiguous alignment. 
+
+```{bash, eval = FALSE}
+cd /home/cnm4001/angsd_hw/hw5/STAR_BWA/STAR_alignments
+mamba activate angsd
+#grep cigar strings with between 2 and 10 digits following N aka spliced out introns
+samtools view ERR458878.Aligned.sortedByCoord.out.bam  | egrep '[0-9]{2,10}N'   | less
+
+ERR458878.748237        272     chrI    7259    3       9M65976N41M1S   *       0       0       GGTTTCAACGCCGGTGCTGGTCACTCCAACACTTTGCAAGTCTCTACCGTG     DEIHCGFF;GFH=FIFIIGB@C3GHIEIHHCFJJIIJJHHHHGFDDFD@@@     NH:i:2  HI:i:2  AS:i:46 nM:i:0
+ERR458878.1055117       272     chrI    7860    3       11M125565N40M   *       0       0       TTCCAACAGAAATACACAAAAGAAAGAAGATAATCAAGTGGTACCGAAAAG     GBGJJJJJGIHGDGHHGIIGG@JJJIIGGGHIIGJJIGFFFBCFFDBD@@@     NH:i:2  HI:i:2  AS:i:39 nM:i:0
+ERR458878.664360        272     chrI    19452   3       10M52605N41M    *       0       0       GAACTGGTGCCACCACCAACGATGTTGACTACCCAATCCCACCAAACCACG     ####DC=8(B1@18?B0:0:?3GGBC9HEIHF?3E<E6BC:BD?DA;D@?;     NH:i:2  HI:i:2  AS:i:47 nM:i:0
+ERR458878.924148        0       chrI    25464   0       22M135N29M      *       0       0       GGTCATCTCAGTAGATGTAGAGGTAAAAGTACCAGTCCATGGTTCAGTGGT     @@@DDD?DFHHHDFEBHE@D<H@CG?FBAHHGC99ACFEHGH9DAG<?D?0     NH:i:5  HI:i:1  AS:i:47 nM:i:1
+ERR458878.173154        256     chrI    32144   3       7M74836N44M     *       0       0       CCACCGGGTCCTCTTGTCCCTCTTGAATGGGTTTTTCATGCAGACAACCTC     ??1DDDDA@FHAFGEGCEDFGHCHG99CDFF10BFD?DFCHIIIGIIBG@H     NH:i:2  HI:i:2  AS:i:47 nM:i:0
+ERR458878.915010        272     chrI    35397   3       8M104124N43M    *       0       0       GGTTGGTCCTTCAGCCTCTGGAGCTGGAGGAGCACCACCTGGGAAACCGCC     BFBDC?(ADFFGFA?39GDFFIF@@FFCDCHEA2A<GBAFDDC)8?D=@@@     NH:i:2  HI:i:2  AS:i:47 nM:i:0
+ERR458878.1390311       272     chrI    36751   1       44M56193N7M     *       0       0       GAAAGCCAATAAAAGTAAGAGGGGCAAGAAGTTAAATAAAAAGGCCCTGGA     GJJIJIJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJIJHHHHHFFFFFCCC     NH:i:3  HI:i:2  AS:i:47 nM:i:0
+ERR458878.1390311       272     chrI    36751   1       44M134584N7M    *       0       0       GAAAGCCAATAAAAGTAAGAGGGGCAAGAAGTTAAATAAAAAGGCCCTGGA     GJJIJIJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJIJHHHHHFFFFFCCC     NH:i:3  HI:i:3  AS:i:47 nM:i:0
+ERR458878.756858        272     chrI    71414   1       10M69388N37M4S  *       0       0       TTCAATGGATAACAAAGAGACATCGAAAGTACCACCACCCAAGTCGACGAT     =CBB<F?90*??GIIHDDB:DGBIG@FBDDEGE@HFAIGHDHHDAA4+11:     NH:i:3  HI:i:3  AS:i:43 nM:i:0
+ERR458878.519045        256     chrI    72103   1       44M17908N7M     *       0       0       CCACGAAATGATCTTCACCACCGATGACAAGTACGCTAAGGCTTTTGACGA     ??7DD>DD:C?DFFBFFB3<@GFFF@*?:???F<@:DAA<>FEI#######     NH:i:4  HI:i:2  AS:i:47 nM:i:0
+ERR458878.519045        256     chrI    72103   1       44M51094N7M     *       0       0       CCACGAAATGATCTTCACCACCGATGACAAGTACGCTAAGGCTTTTGACGA     ??7DD>DD:C?DFFBFFB3<@GFFF@*?:???F<@:DAA<>FEI#######     NH:i:4  HI:i:3  AS:i:47 nM:i:0
+ERR458878.519045        256     chrI    72103   1       44M131731N7M    *       0       0       CCACGAAATGATCTTCACCACCGATGACAAGTACGCTAAGGCTTTTGACGA     ??7DD>DD:C?DFFBFFB3<@GFFF@*?:???F<@:DAA<>FEI#######     NH:i:4  HI:i:4  AS:i:47 nM:i:0
+ERR458878.53828 0       chrI    72371   3       44M513N7M       *       0       0       AAGGAAGATTTGAGATTCGGTGTCAAGAACGGTGTCCACATGGTCGTCGCT     =@<D:B?BF4C<D1C><@EBAB<FEHAA1?:)1?0BD9B3*?B**(0?7@A     NH:i:2  HI:i:1  AS:i:49 nM:i:0
+ERR458878.1085919       256     chrI    72727   3       43M91528N8M     *       0       0       AGTTTCCGATGTCGGTAACGCTCTCTTGGATGGTGCTGACTGTGCTATGTT     :;?D7D4A82<DA=AEEE+1C:)::?*:C*:3@*:4?*9)**09*9?B=B#     NH:i:2  HI:i:2  AS:i:45 nM:i:1
+ERR458878.996907        16      chrI    72908   255     43M120119N8M    *       0       0       CCAACCTCCACCACCGAAACCGTCGCTGCCTCCGCTGTCGCTGCCTCCACA     <?9?B?9B?9B@;CBDD?5EEIIIIIIIFIEIIIIFIIFFFFFDDBB4:@@     NH:i:1  HI:i:1  AS:i:45 nM:i:1
+ERR458878.1263263       272     chrI    72948   1       45M36625N6M     *       0       0       CTGCTGTTTTCGAACAAAAGGCCAAGGCTATCATTGTCTTGTCCATTTCCG     FD@;GB?1G?6<?1@C?9?9;;>F@BHCH?HF<C;:CB=BBFBDDDD=@?@     NH:i:3  HI:i:2  AS:i:47 nM:i:0
+ERR458878.1263263       272     chrI    72948   1       45M117061N6M    *       0       0       CTGCTGTTTTCGAACAAAAGGCCAAGGCTATCATTGTCTTGTCCATTTCCG     FD@;GB?1G?6<?1@C?9?9;;>F@BHCH?HF<C;:CB=BBFBDDDD=@?@     NH:i:3  HI:i:3  AS:i:47 nM:i:0
+ERR458878.1254643       0       chrI    72955   3       44M22168N7M     *       0       0       TTTCGAACAAAAGGCCAAGGCTATCATTGTCTTGTCCACTTCCGGAGATCG     CCCFFFFFGHHHHJIJJJJJJIJJJIJJJIIJJGGGJEGHIGGGGGHGHII     NH:i:2  HI:i:1  AS:i:45 nM:i:1
+ERR458878.106011        256     chrI    73033   3       39M144745N12M   *       0       0       AAACTGTCCAATCATCTTGGTTACCAGATGCCCAAGAGCTTTTAATTTTTT     =??1DD,?DDD>??DEEDFE<CCFEEDFCF<F1?#################     NH:i:2  HI:i:2  AS:i:39 nM:i:0
+ERR458878.1069019       256     chrI    81343   3       11M61419N40M    *       0       0       AGAAGAAGAGGTGACGATGTCGATTTATTCGGTTCCGACGATGAAGAAGCT     @<?BDD:BHDD<AFGHE??E?BDGIIICA?31CD;@@GIBACFF;@FFFH@     NH:i:2  HI:i:2  AS:i:39 nM:i:0
+ERR458878.915928        16      chrI    87354   255     34M113N17M      *       0       0       ACAGTCTAAGTCAAGGACTGCGGAACTACAAGCTGAAATTGATGATAACGT     BBDB<EFDEGGGHCGCIHEGDFBC@HBHIIHEHDGGHDHHHFAA3A+4;@@     NH:i:1  HI:i:1  AS:i:49 nM:i:1
+ERR458878.437793        16      chrI    87355   255     33M113N18M      *       0       0       CAGTCTAAGTCAAGGACTGCGGAACTACAAGCTGAAATTGATGATACCGTG     CG???4IIFCDGCF??C@BEE<A24DAFAFHC:<GBF?BDFFDD?;DD??+     NH:i:1  HI:i:1  AS:i:51 nM:i:0
+ERR458878.243343        0       chrI    87357   255     31M113N20M      *       0       0       GTCTAAGTCAAGGACTGCGGAACTACAAGCTGAAATTGATGATACCGTGGG     CCCFFFFFHHHHHJJJJJJJJJJJJJJJJJJJJJJJJJJJJIJJJJJHHIJ     NH:i:1  HI:i:1  AS:i:51 nM:i:0
+ERR458878.1386725       0       chrI    87357   255     31M113N20M      *       0       0       GTCGAAGTCAAGGACTGCGGAACTACAAGCTGAAATTGATGATACCGTGGG     ?114BDDFHFDHFAHGIIIJIIIGIIGIGIHIIBFGIIBGHICIGGIJIJJ     NH:i:1  HI:i:1  AS:i:49 nM:i:1
+ERR458878.881409        16      chrI    87358   255     30M113N21M      *       0       0       TCTAAGTCAAGGACTGCGGAACTACAAGCTGAAATTGATGATACCGTGGGA     ##BFD9GB?9B??0F<FE<FFCC<;IH>CIFDHF<BFE>D:FF8DDDB1?@     NH:i:1  HI:i:1  AS:i:51 nM:i:0
+ERR458878.652610        0       chrI    87359   255     29M113N22M      *       0       0       CTAAGTCAAGGACTGCGGAACTACAAGCTGAAATTGATGATACCGTGGGAA     CCCFDEFFHHHGHJJIJJJJJJJJJIJJJJJIJJJJJJJJJJJJJHIJJII     NH:i:1  HI:i:1  AS:i:51 nM:i:0
+ERR458878.1115720       16      chrI    87363   255     25M113N24M2S    *       0       0       GTCAAGGACTGCGGAACTACAAGCTGAAATTGATGATACCGTGGGAATACT     IIEIIIIHIIIIIIGFIIIGIIIIIIIIIIIIIIGHGEHHHHHDDD=4++=     NH:i:1  HI:i:1  AS:i:49 nM:i:0
+ERR458878.575902        16      chrI    87364   255     24M113N27M      *       0       0       TCAAGGACTGCGGAACTACAAGCTGAAATTGATGATACCGTGGGAATAATG     GD?9/90?:BGEDEDG@IHBBB>DAIHEC:3GIGGFCB<FA3?ADDD?@?:     NH:i:1  HI:i:1  AS:i:51 nM:i:0
+
+
+cd /home/cnm4001/angsd_hw/hw5/STAR_BWA/BWA_alignments
+#get same read as 1st read in above grep output
+samtools view ERR458878.bwa.sorted.bam  | egrep 'ERR458878.748237'   | less
+ERR458878.748237        16      chrI    73235   60      51M     *       0       0       GGTTTCAACGCCGGTGCTGGTCACTCCAACACTTTGCAAGTCTCTACCGTG     DEIHCGFF;GFH=FIFIIGB@C3GHIEIHHCFJJIIJJHHHHGFDDFD@@@     NM:i:2  MD:Z:8G41T0     AS:i:45 XS:i:0q
+
+
+```
+We can see for read 748237 in ERR458878, STAR maps it as a split read at position 7259 on ChrI whereas BWA maps it to a position 73235 on ChrI as a contiguous alignment. 
+
+
+## Question 7 
+
+If we take the bit flag of every read and do the bitwise AND with 00000000100 , any read that is all zeros is a read that is mapped and any read with a 1 in the 3rd position is an unmapped read.
+
+

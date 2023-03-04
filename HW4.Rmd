@@ -1,0 +1,415 @@
+---
+title: "HW4"
+author: "Caden McQuillen"
+date: '2023-02-01'
+output:
+  html_document:
+    toc: yes
+---
+
+## Part 1: Question 1
+Copy metadata to cluster and get WT2 ENA codes
+```{bash, eval = FALSE}
+
+#On local machine copy files over to cluster
+scp /Users/Caden/Downloads/ERP004763_sample_mapping.tsv cnm4001@aphrodite.med.cornell.edu:~/
+scp /Users/Caden/Downloads/filereport_read_run_PRJEB5348_tsv.txt cnm4001@aphrodite.med.cornell.edu:~/
+
+
+
+#On cluster
+cd angsd_hw
+mkdir hw4
+cd ..
+
+mv ERP004763_sample_mapping.tsv angsd_hw/hw4
+mv filereport_read_run_PRJEB5348_tsv.txt angsd_hw/hw4
+
+cd angsd_hw/hw4
+
+#Grab only WT samples
+egrep 'WT' ERP004763_sample_mapping.tsv   > WT_Codes.txt
+#Grab only Replicates that end in 2 (this also includes 12, 42, etc)
+egrep '2$' WT_Codes.txt > WT2_Codes.txt
+vim WT2_Codes.txt
+# delete unwanted samples
+
+egrep -o 'ERR[0-9]{6}' WT2_Codes.txt  > WT2_ENA_only.txt
+head WT2_ENA_only.txt
+ERR458878
+ERR458879
+ERR458880
+ERR458881
+ERR458882
+ERR458883
+ERR458884
+```
+WT2 fastq download Shell Script (downfile_fastq_test.sh)
+```{bash, eval = FALSE}
+#! /bin/bash -l
+
+#SBATCH --partition=angsd_class
+#SBATCH --nodes =1
+#SBATCH --ntasks =1
+#SBATCH --job -name=test
+#SBATCH --time =00:20:00 # HH/MM/SS
+#SBATCH --mem=6G
+
+
+cd /home/cnm4001/angsd_hw/hw4
+
+while read ID; do
+  wget "ftp.sra.ebi.ac.uk/vol1/fastq/ERR458/${ID}/${ID}.fastq.gz"
+
+done < WT2_ENA_only.txt
+
+```
+Submit Batch Job
+```{bash, eval = FALSE}
+sbatch downfile_fastq_test.sh 
+```
+Create and move WT2 fastqs to new directory
+```{bash, eval = FALSE}
+
+#Realized this could have been included in the shell script but already had done it separately
+mkdir WT2
+mv ERR458878.fastq.gz WT2
+mv ERR458879.fastq.gz WT2
+mv ERR458880.fastq.gz WT2
+mv ERR458881.fastq.gz WT2
+mv ERR458882.fastq.gz WT2
+mv ERR458883.fastq.gz WT2
+mv ERR458884.fastq.gz WT2
+
+
+```
+## Part 1: Question 2
+There are seven technical replicates distributed over seven lanes for each sample therefore there are seven fastq files for the WT2 sample. Each file represents a different lane.
+
+## Part 1: Question 3
+```{bash, eval=FALSE}
+cd WT2
+
+#Number of lines
+for file in *; do
+  zcat $file | wc -l;
+done
+
+5870276
+5800048
+5766276
+5286992
+4527136
+4562752
+5846584
+
+#Number of Reads
+for file in *; do
+  totalLines=$(zcat $file | wc -l)
+  echo $(( $totalLines / 4 ));
+done
+
+1467569
+1450012
+1441569
+1321748
+1131784
+1140688
+1461646
+```
+
+## Part 2: Question 1
+Get WT1 fastqs and move to new directory 
+```{bash, eval= FALSE}
+#Get WT sample 1
+egrep '1$' WT_Codes.txt > WT1_Codes.txt
+# delete unwanted samples
+vim WT1_Codes.txt
+#get just ENA code
+egrep -o 'ERR[0-9]{6}' WT1_Codes.txt  > WT1_ENA_only.txt
+
+
+#Edit shell script for WT1
+#! /bin/bash -l
+
+#SBATCH --partition=angsd_class
+#SBATCH --nodes =1
+#SBATCH --ntasks =1
+#SBATCH --job -name=test
+#SBATCH --time =00:20:00 # HH/MM/SS
+#SBATCH --mem=6G
+
+
+cd /home/cnm4001/angsd_hw/hw4
+
+while read ID; do
+  wget "ftp.sra.ebi.ac.uk/vol1/fastq/ERR458/${ID}/${ID}.fastq.gz"
+
+done < WT1_ENA_only.txt
+
+#submit job
+sbatch downfile_fastq_test.sh 
+#move files
+mkdir WT1
+mv ERR458499.fastq.gz WT1
+mv ERR458498.fastq.gz WT1
+mv ERR458497.fastq.gz WT1
+mv ERR458496.fastq.gz WT1
+mv ERR458495.fastq.gz WT1
+mv ERR458494.fastq.gz WT1
+mv ERR458493.fastq.gz WT1
+
+```
+
+Get WT3 fastqs and move to new directory 
+```{bash, eval = FALSE}
+#Get WT sample 3
+egrep '3$' WT_Codes.txt > WT3_Codes.txt
+# delete unwanted samples
+vim WT3_Codes.txt
+#get just ENA code
+egrep -o 'ERR[0-9]{6}' WT3_Codes.txt  > WT3_ENA_only.txt
+
+
+#Edit shell script for WT3
+
+#! /bin/bash -l
+
+#SBATCH --partition=angsd_class
+#SBATCH --nodes =1
+#SBATCH --ntasks =1
+#SBATCH --job -name=test
+#SBATCH --time =00:20:00 # HH/MM/SS
+#SBATCH --mem=6G
+
+
+cd /home/cnm4001/angsd_hw/hw4
+
+while read ID; do
+  wget "ftp.sra.ebi.ac.uk/vol1/fastq/ERR458/${ID}/${ID}.fastq.gz"
+
+done < WT3_ENA_only.txt
+
+#Submit job
+sbatch downfile_fastq_test.sh 
+#move files
+mkdir WT3
+mv ERR458885.fastq.gz WT3
+mv ERR458886.fastq.gz WT3
+mv ERR458887.fastq.gz WT3
+mv ERR458888.fastq.gz WT3
+mv ERR458889.fastq.gz WT3
+mv ERR458890.fastq.gz WT3
+mv ERR458891.fastq.gz WT3
+
+```
+
+Get SNF2 Samples
+```{bash, eval = FALSE}
+egrep 'SNF2' ERP004763_sample_mapping.tsv   > SNF2_Codes.txt
+
+#Get SNF2 samples 1,2,3
+egrep '1$' SNF2_Codes.txt > SNF2_1_Codes.txt
+egrep '2$' SNF2_Codes.txt > SNF2_2_Codes.txt
+egrep '2$' SNF2_Codes.txt > SNF2_3_Codes.txt
+ 
+#Delete unwanted samples
+vim SNF2_1_Codes.txt
+vim SNF2_2_Codes.txt
+vim SNF2_3_Codes.txt
+ 
+#get just ENA code
+egrep -o 'ERR[0-9]{6}' SNF2_1_Codes.txt  > SNF2_1_ENA_only.txt
+egrep -o 'ERR[0-9]{6}' SNF2_2_Codes.txt  > SNF2_2_ENA_only.txt
+egrep -o 'ERR[0-9]{6}' SNF2_3_Codes.txt  > SNF2_3_ENA_only.txt
+
+#make new directories
+mkdir SNF2_1
+mkdir SNF2_2
+mkdir SNF2_3
+
+
+
+#Edit shell script for SNF2_1
+
+#! /bin/bash -l
+
+#SBATCH --partition=angsd_class
+#SBATCH --nodes =1
+#SBATCH --ntasks =1
+#SBATCH --job -name=test
+#SBATCH --time =00:35:00 # HH/MM/SS
+#SBATCH --mem=6G
+
+
+cd /home/cnm4001/angsd_hw/hw4
+
+while read ID; do
+  wget "ftp.sra.ebi.ac.uk/vol1/fastq/ERR458/${ID}/${ID}.fastq.gz"
+
+done < SNF2_1_ENA_only.txt
+#Submit job
+sbatch downfile_fastq_test.sh 
+#Move files
+mv ERR458500.fastq.gz SNF2_1
+mv ERR458501.fastq.gz SNF2_1
+mv ERR458502.fastq.gz SNF2_1
+mv ERR458503.fastq.gz SNF2_1
+mv ERR458504.fastq.gz SNF2_1
+mv ERR458505.fastq.gz SNF2_1
+mv ERR458506.fastq.gz SNF2_1
+
+#Edit shell script for SNF2_2
+#! /bin/bash -l
+
+#SBATCH --partition=angsd_class
+#SBATCH --nodes =1
+#SBATCH --ntasks =1
+#SBATCH --job -name=test
+#SBATCH --time =00:35:00 # HH/MM/SS
+#SBATCH --mem=6G
+
+
+cd /home/cnm4001/angsd_hw/hw4
+
+while read ID; do
+  wget "ftp.sra.ebi.ac.uk/vol1/fastq/ERR458/${ID}/${ID}.fastq.gz"
+
+done < SNF2_2_ENA_only.txt
+#Submit job
+sbatch downfile_fastq_test.sh 
+#move files
+mv ERR458507.fastq.gz SNF2_2
+mv ERR458508.fastq.gz SNF2_2
+mv ERR458509.fastq.gz SNF2_2
+mv ERR458510.fastq.gz SNF2_2
+mv ERR458511.fastq.gz SNF2_2
+mv ERR458512.fastq.gz SNF2_2
+mv ERR458513.fastq.gz SNF2_2
+
+
+#Edit shell script for SNF2_3
+#! /bin/bash -l
+
+#SBATCH --partition=angsd_class
+#SBATCH --nodes =1
+#SBATCH --ntasks =1
+#SBATCH --job -name=test
+#SBATCH --time =00:35:00 # HH/MM/SS
+#SBATCH --mem=6G
+
+
+cd /home/cnm4001/angsd_hw/hw4
+
+while read ID; do
+  wget "ftp.sra.ebi.ac.uk/vol1/fastq/ERR458/${ID}/${ID}.fastq.gz"
+
+done < SNF2_3_ENA_only.txt
+
+#Submit job
+sbatch downfile_fastq_test.sh 
+#move files
+mv ERR458514.fastq.gz SNF2_3
+mv ERR458515.fastq.gz SNF2_3
+mv ERR458516.fastq.gz SNF2_3
+mv ERR458517.fastq.gz SNF2_3
+mv ERR458518.fastq.gz SNF2_3
+mv ERR458519.fastq.gz SNF2_3
+mv ERR458520.fastq.gz SNF2_3
+
+```
+## Part 2: Question 2
+```{bash, eval = FALSE}
+
+#! /bin/bash -l
+
+#SBATCH --partition=angsd_class
+#SBATCH --nodes =1
+#SBATCH --ntasks =1
+#SBATCH --job -name=test
+#SBATCH --time =01:00:00 # HH/MM/SS
+#SBATCH --mem=6G
+
+
+cd /home/cnm4001/angsd_hw/hw4
+mamba activate angsd
+
+for index in 1 2 3; do
+  cd WT$index
+  for file in *; do
+    fastqc $file --extract;
+  done
+  cd ..
+  
+  cd SNF2_$index
+  for file in *; do
+    fastqc $file --extract;
+  done
+  cd ..;
+done
+
+## On Sample WT1 perform trim galore and then run fastqc after trimming
+cd WT1
+mamba activate trim-galore
+for index in 3 4 5 6 7 8 9; do
+  trim_galore --fastqc --stringency 3 ERR45849$index.fastq.gz;
+done
+  
+#On local machine, copy htmls to from cluster to local machine
+scp cnm4001@aphrodite.med.cornell.edu:/home/cnm4001/angsd_hw/hw4/WT1/ERR458493_trimmed_fastqc.html .
+scp cnm4001@aphrodite.med.cornell.edu:/home/cnm4001/angsd_hw/hw4/WT1/ERR458493_fastqc.html .
+
+```
+I changed stringency from 1 to 3 and added the --fastqc flag so that it runs fastqc automatically after performing trim galore. 
+
+## Part 2: Question 3
+The GC% percentage (both 43%) did not change between the trimmed and untrimmed in the QC reports.This is probably because when we the total percentage of sequence we trim is fairly small. Since the QC before trimming was already pretty good, we mainly removed potential adaptors which would we a small proportion of the total amount of sequence. Therefore the global GC% isn't likely to change that much. The sequence length distribution changes from one peak at 51 for untrimmed to a range from 20-51 for the trim. This is because we are trimming sequences that probably contain an adapter sequence when we run trim galore therefore we will have some sequences which we trim that will have a shorter sequence length post trimming. 
+
+## Part 2: Question 4
+
+```{bash, eval = FALSE}
+cd angsd_hw/hw4
+mamba activate multiqc
+multiqc .
+
+#On local machine, copy html report from cluster to local machine
+scp cnm4001@aphrodite.med.cornell.edu:/home/cnm4001/angsd_hw/hw4/multiqc_report.html .
+```
+
+red = SNF2 \
+blue = WT \
+![Per Sequence Quality Scores WT and SNF2.](/Users/Caden/Desktop/angsd/fastqc_per_sequence_quality_scores_plot.png)
+
+
+## Part 2: Question 5
+
+In the multiQC report, for every sample there is slight variation between all the technical replicates. However, if you examine the QC for all technical replicates within one sample and determine that all replicates QC looks good enough and are all within a close range of each other then you could be justified in combining them into a single fastq file. 
+
+In my opinion I wouldn't and would just keep all technical replicates separate because maybe the QC all looks good but you notice something odd when you are doing downstream analysis and it would be easier to remove and deal with if all the technical replicates are separate. 
+
+## Part 2: Question 6
+
+```{bash, eval = FALSE}
+
+cat > SNF2_1_combined.fastq
+cat ERR458514.fastq >> SNF2_1_combined.fastq
+cat ERR458515.fastq >> SNF2_1_combined.fastq
+cat ERR458516.fastq >> SNF2_1_combined.fastq
+cat ERR458517.fastq >> SNF2_1_combined.fastq
+cat ERR458518.fastq >> SNF2_1_combined.fastq
+cat ERR458519.fastq >> SNF2_1_combined.fastq
+cat ERR458520.fastq >> SNF2_1_combined.fastq
+
+
+```
+
+
+## Part 2: Question 7
+I would first grab every fourth line from the fastq file. This would then be a file containing all the phred scores for every read and nothing else. \
+First: \
+I would check for any characters between "!" through ":", if there was one or more of these charterers then we would know its either Sanger or Illumina 1.8+. If we did find one or more of those previously mentioned characters, I would then check for "J" because if there was one that would mean we were using Illumina 1.8+, otherwise we wouldn't be able to tell between Sanger and Illumina 1.8. \
+
+Second: \
+Assuming there wasn't one of the characters "!" through ":", I would then check for "K" through "h". These would only be found in +64 offset phred scores (Illumina 1.3,Illumina 1.5, Solexa). Assuming we did find one of those characters, I would then check for ";" through "?" which would only be found if it was Solexa. If none of those characters were found then I would check for "@" or "A". These are only found in Solexa and Illumina 1.3, if one was present we would know it was NOT Illumina 1.5 but wouldn't be able to distinguished between Illumina 1.3 and Solexa. Lastly, if "@" or "A" was not found then it could be any of Solexa, Illumina 1.3, or illumina 1.5.
+
+

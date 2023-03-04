@@ -1,0 +1,507 @@
+---
+title: "ANGSD HW3"
+author: "Caden McQuillen"
+date: '2023-01-27'
+output:
+  html_document:
+    toc: yes
+---
+## Question 1
+```{bash navigate, eval = FALSE}
+#navigate to demo.fastq file
+cd angsd_hw/
+cd hw1
+ls
+demo.fastq  sacCer1.chrom.sizes  sacCer2.chrom.sizes  sacCer3.chrom.sizes
+```
+```{bash Examine file, eval = FALSE}
+#see what it looks like
+less demo.fastq
+#not showing full output here but will show part of it with head
+head demo.fastq 
+
+@NB501971:154:H3LLMBGX7:1:11101:6765:1063 1:N:0:GAGTGG
+CGGCTNGTCTTAAACGTCTTTAAGGTGCTTGAGAGGATGAAGGTGGTGAAAAAGAGAATACAGGACCAAAAGAGGACATCAGGAG
++
+AA/AA#EEEE/EEEE//EAA/E6//EAE/EEEEEA/E///E6///EEEE/E66AEEEE/AEEA/AEEEE/E/<EEEEAEEAEEEE
+@NB501971:154:H3LLMBGX7:1:11101:6751:1063 1:N:0:GAGTGG
+GGCATNTTGAAGTACAATACACCAGGCTTTCATTTCTTCTTTACATTATGATTGTGAGATCGGAAGAGCACACGTCTGAACTCCA
++
+AAAAA#EEEEAEEEA/EE/EEAEEEEEEEEEEEEEEEEEE/EE/EEEEA/EEEAEEEAE<AEEEEEE/6AEEAEAEE/EEAEE<<
+@NB501971:154:H3LLMBGX7:1:11101:5236:1064 1:N:0:GAGTGG
+CCGCCNAGAGAGCCCCAGAGCAGAGGAAAATCCAAAGTGGAGAGAGGGGAAGAAAGAGACCAGTGAGTCATCCGTCCAGAAGGCG
+
+```
+```{bash Egrep, eval = FALSE}
+#regex pattern: 'N:0:.{6}' then used cut to only show the barcode and sort to put them in lexigraphical order, stored in txt file for further manipulation
+egrep -o 'N:0:.{6}' demo.fastq | cut -c 5-10 | sort  > barcodes.txt
+
+head barcodes.txt 
+AAGTGG
+AAGTGG
+AAGTGG
+AAGTGG
+AAGTGG
+AAGTGG
+AAGTGG
+AAGTGG
+AAGTGG
+AAGTGG
+
+```
+```{bash unique barcodes, eval = FALSE}
+#list unique barcodes and number of times used
+uniq -c barcodes.txt
+     12 AAGTGG
+     36 CAGTGG
+      5 GAATGG
+     64 GACTGG
+     45 GAGAGG
+      6 GAGCGG
+     50 GAGGGG
+      6 GAGTAG
+     59 GAGTCG
+     27 GAGTGA
+     76 GAGTGC
+  24260 GAGTGG
+     36 GAGTGT
+     44 GAGTTG
+     53 GATTGG
+     39 GCGTGG
+     73 GGGTGG
+     50 GTGTGG
+     20 NAGTGG
+     39 TAGTGG
+
+
+uniq -c barcodes.txt | sort -nr
+  24260 GAGTGG
+     76 GAGTGC
+     73 GGGTGG
+     64 GACTGG
+     59 GAGTCG
+     53 GATTGG
+     50 GTGTGG
+     50 GAGGGG
+     45 GAGAGG
+     44 GAGTTG
+     39 TAGTGG
+     39 GCGTGG
+     36 GAGTGT
+     36 CAGTGG
+     27 GAGTGA
+     20 NAGTGG
+     12 AAGTGG
+      6 GAGTAG
+      6 GAGCGG
+      5 GAATGG
+
+uniq -c barcodes.txt | sort -nr | wc -l
+20
+```
+There are 20 unique barcodes. 
+Ordered list from most to least used:
+GAGTGG,
+GAGTGC,
+GGGTGG,
+GACTGG,
+GAGTCG,
+GATTGG,
+GTGTGG,
+GAGGGG,
+GAGAGG,
+GAGTTG,
+TAGTGG,
+GCGTGG,
+GAGTGT,
+CAGTGG,
+GAGTGA,
+NAGTGG,
+AAGTGG,
+GAGTAG,
+GAGCGG,
+GAATGG
+
+
+## Question 2
+```{bash Copying files, eval = FALSE}
+#Make new directory and copy files over
+cd angsd_hw/
+mkdir hw3
+cd hw3
+cp /home/luce/angsd/demo-data/{1A3B.pdb,1AAP.pdb,1BTH.pdb,1DZI.pdb,1M3D.pdb,1NMJ.pdb,1O91.pdb,1TAW.pdb,1Y0F.pdb} .
+ls
+1A3B.pdb  1AAP.pdb  1BTH.pdb  1DZI.pdb  1M3D.pdb  1NMJ.pdb  1O91.pdb  1TAW.pdb  1Y0F.pdb
+
+```
+```{bash For loop, eval = FALSE}
+
+##First try:
+for file in *; do
+  echo $file
+  wc -l $file;
+done
+
+1A3B.pdb
+2983 1A3B.pdb
+1AAP.pdb
+1068 1AAP.pdb
+1BTH.pdb
+6359 1BTH.pdb
+1DZI.pdb
+2895 1DZI.pdb
+1M3D.pdb
+23352 1M3D.pdb
+1NMJ.pdb
+543 1NMJ.pdb
+1O91.pdb
+4057 1O91.pdb
+1TAW.pdb
+2520 1TAW.pdb
+1Y0F.pdb
+4259 1Y0F.pdb
+
+#second try: remove file name
+for file in *; do
+    echo $file
+    wc -l $file | cut -c 1-4
+done
+1A3B.pdb
+2983
+1AAP.pdb
+1068
+1BTH.pdb
+6359
+1DZI.pdb
+2895
+1M3D.pdb
+2335
+1NMJ.pdb
+543 
+1O91.pdb
+4057
+1TAW.pdb
+2520
+1Y0F.pdb
+4259
+
+#third try: adding number of atoms
+for file in *; do
+    echo $file
+    wc -l $file | cut -c 1-4
+    egrep '^(ATOM|TER)' $file | wc -l
+done
+
+1A3B.pdb
+2983
+2328
+1AAP.pdb
+1068
+866
+1BTH.pdb
+6359
+5818
+1DZI.pdb
+2895
+1718
+1M3D.pdb
+2335
+20809
+1NMJ.pdb
+543 
+428
+1O91.pdb
+4057
+3123
+1TAW.pdb
+2520
+2046
+1Y0F.pdb
+4259
+2803
+
+#fourth try: adding organism
+for file in *; do
+    echo $file
+    wc -l $file | cut -c 1-4
+    egrep '^(ATOM|TER)' $file | wc -l
+    egrep 'ORGANISM_SCIENTIFIC' $file ;
+done
+1A3B.pdb
+2983
+2328
+SOURCE   2 ORGANISM_SCIENTIFIC: HOMO SAPIENS;                                   
+SOURCE   6 ORGANISM_SCIENTIFIC: HIRUDO MEDICINALIS;                             
+1AAP.pdb
+1068
+866
+1BTH.pdb
+6359
+5818
+SOURCE   2 ORGANISM_SCIENTIFIC: BOS TAURUS;                                     
+SOURCE   6 ORGANISM_SCIENTIFIC: BOS TAURUS;                                     
+1DZI.pdb
+2895
+1718
+SOURCE   2 ORGANISM_SCIENTIFIC: HOMO SAPIENS;                                   
+1M3D.pdb
+2335
+20809
+SOURCE   2 ORGANISM_SCIENTIFIC: BOS TAURUS;                                     
+SOURCE   6 ORGANISM_SCIENTIFIC: BOS TAURUS;                                     
+1NMJ.pdb
+543 
+428
+SOURCE   2 ORGANISM_SCIENTIFIC: RATTUS NORVEGICUS;                              
+1O91.pdb
+4057
+3123
+SOURCE   2 ORGANISM_SCIENTIFIC: MUS MUSCULUS;                                   
+1TAW.pdb
+2520
+2046
+SOURCE   2 ORGANISM_SCIENTIFIC: BOS TAURUS;                                     
+SOURCE   5 ORGANISM_SCIENTIFIC: HOMO SAPIENS;                                   
+1Y0F.pdb
+4259
+2803
+SOURCE   2 ORGANISM_SCIENTIFIC: RATTUS NORVEGICUS;                              
+SOURCE   6 ORGANISM_SCIENTIFIC: RATTUS NORVEGICUS;  
+
+#fifth try: remove stuff before organism name
+for file in *; do
+    echo $file
+    wc -l $file | cut -c 1-4
+    egrep '^(ATOM|TER)' $file | wc -l
+    egrep 'ORGANISM_SCIENTIFIC' $file | cut -c 33- | uniq;
+done
+
+1A3B.pdb
+2983
+2328
+HOMO SAPIENS;                                   
+HIRUDO MEDICINALIS;                             
+1AAP.pdb
+1068
+866
+1BTH.pdb
+6359
+5818
+BOS TAURUS;                                     
+1DZI.pdb
+2895
+1718
+HOMO SAPIENS;                                   
+1M3D.pdb
+2335
+20809
+BOS TAURUS;                                     
+1NMJ.pdb
+543 
+428
+RATTUS NORVEGICUS;                              
+1O91.pdb
+4057
+3123
+MUS MUSCULUS;                                   
+1TAW.pdb
+2520
+2046
+BOS TAURUS;                                     
+HOMO SAPIENS;                                   
+1Y0F.pdb
+4259
+2803
+RATTUS NORVEGICUS;
+
+#sixth try: added breaks to delineate each file
+for file in *; do
+    echo $file
+    wc -l $file | cut -c 1-4
+    egrep '^(ATOM|TER)' $file | wc -l
+    egrep 'ORGANISM_SCIENTIFIC' $file | cut -c 33- | uniq
+    echo "------------------";
+done
+
+1A3B.pdb
+2983
+2328
+HOMO SAPIENS;                                   
+HIRUDO MEDICINALIS;                             
+------------------
+1AAP.pdb
+1068
+866
+------------------
+1BTH.pdb
+6359
+5818
+BOS TAURUS;                                     
+------------------
+1DZI.pdb
+2895
+1718
+HOMO SAPIENS;                                   
+------------------
+1M3D.pdb
+2335
+20809
+BOS TAURUS;                                     
+------------------
+1NMJ.pdb
+543 
+428
+RATTUS NORVEGICUS;                              
+------------------
+1O91.pdb
+4057
+3123
+MUS MUSCULUS;                                   
+------------------
+1TAW.pdb
+2520
+2046
+BOS TAURUS;                                     
+HOMO SAPIENS;                                   
+------------------
+1Y0F.pdb
+4259
+2803
+RATTUS NORVEGICUS;                              
+------------------
+
+
+
+#seventh try: special case for 1AAP and extra housekeepign for ";" and "$"
+for file in *; do
+  echo $file
+  wc -l $file | cut -c 1-4
+  egrep '^(ATOM|TER)' $file | wc -l
+  egrep 'ORGANISM_SCIENTIFIC' $file | cut -c 33-  | sed 's/[;]//' | uniq
+  if [[ "$file" == "1AAP.pdb" ]];
+  then
+    egrep  'HOMO' $file | cut -c 18-30 | sed 's/[$]//'
+    egrep  'ESCHERICHIA' $file | cut -c 13-29 | sed 's/[$]//'
+
+  fi
+  echo "------------------";
+done
+
+1A3B.pdb
+2983
+2328
+HOMO SAPIENS                                   
+HIRUDO MEDICINALIS                             
+------------------
+1AAP.pdb
+1068
+866
+HOMO SAPIENS
+ESCHERICHIA COLI
+------------------
+1BTH.pdb
+6359
+5818
+BOS TAURUS                                     
+------------------
+1DZI.pdb
+2895
+1718
+HOMO SAPIENS                                   
+------------------
+1M3D.pdb
+2335
+20809
+BOS TAURUS                                     
+------------------
+1NMJ.pdb
+543 
+428
+RATTUS NORVEGICUS                              
+------------------
+1O91.pdb
+4057
+3123
+MUS MUSCULUS                                   
+------------------
+1TAW.pdb
+2520
+2046
+BOS TAURUS                                     
+HOMO SAPIENS                                   
+------------------
+1Y0F.pdb
+4259
+2803
+RATTUS NORVEGICUS                              
+------------------
+
+
+#eight try: Formatting improvements and fixes bug that accidentally truncated 1M3D.pdb line count
+for file in *; do
+  echo -n "Filename: " 
+  echo $file
+  echo -n "Line Count: " 
+  wc -l $file | sed "s/\<$file\>//g"
+  echo -n "Atom Count: " 
+  egrep '^(ATOM|TER)' $file | wc -l
+  echo -n "Organism(s): " 
+  egrep 'ORGANISM_SCIENTIFIC' $file | cut -c 33-  | sed 's/[;]//'  | uniq  
+  if [[ "$file" == "1AAP.pdb" ]];
+  then
+    egrep  'HOMO' $file | cut -c 18-30 | sed 's/[$]//' 
+    egrep  'ESCHERICHIA' $file | cut -c 13-29 | sed 's/[$]//'
+
+  fi
+  echo "------------------";
+done
+
+Filename: 1A3B.pdb
+Line Count: 2983 
+Atom Count: 2328
+Organism(s): HOMO SAPIENS                                   
+HIRUDO MEDICINALIS                             
+------------------
+Filename: 1AAP.pdb
+Line Count: 1068 
+Atom Count: 866
+Organism(s): HOMO SAPIENS
+ESCHERICHIA COLI
+------------------
+Filename: 1BTH.pdb
+Line Count: 6359 
+Atom Count: 5818
+Organism(s): BOS TAURUS                                     
+------------------
+Filename: 1DZI.pdb
+Line Count: 2895 
+Atom Count: 1718
+Organism(s): HOMO SAPIENS                                   
+------------------
+Filename: 1M3D.pdb
+Line Count: 23352 
+Atom Count: 20809
+Organism(s): BOS TAURUS                                     
+------------------
+Filename: 1NMJ.pdb
+Line Count: 543 
+Atom Count: 428
+Organism(s): RATTUS NORVEGICUS                              
+------------------
+Filename: 1O91.pdb
+Line Count: 4057 
+Atom Count: 3123
+Organism(s): MUS MUSCULUS                                   
+------------------
+Filename: 1TAW.pdb
+Line Count: 2520 
+Atom Count: 2046
+Organism(s): BOS TAURUS                                     
+HOMO SAPIENS                                   
+------------------
+Filename: 1Y0F.pdb
+Line Count: 4259 
+Atom Count: 2803
+Organism(s): RATTUS NORVEGICUS                              
+------------------
+```

@@ -1,0 +1,152 @@
+---
+title: "HW6"
+author: "Caden McQuillen"
+date: '2023-02-15'
+output:
+  html_document:
+    toc: yes
+---
+## Library
+```{r,message=FALSE }
+library(dplyr)
+library(ggplot2)
+library(stringr)
+
+```
+
+## Question 1
+```{bash, eval=FALSE}
+#get WT1 fastqc files
+scp cnm4001@aphrodite.med.cornell.edu:/home/cnm4001/angsd_hw/hw4/WT1/ERR458493_fastqc/fastqc_data.txt .
+mv fastqc_data.txt WT1_ERR458493_fastqc_data.txt
+scp cnm4001@aphrodite.med.cornell.edu:/home/cnm4001/angsd_hw/hw4/WT1/ERR458494_fastqc/fastqc_data.txt .
+mv fastqc_data.txt WT1_ERR458494_fastqc_data.txt
+#get SNF2_1 fastqc files
+scp cnm4001@aphrodite.med.cornell.edu:/home/cnm4001/angsd_hw/hw4/SNF2_1/ERR458500_fastqc/fastqc_data.txt .
+mv fastqc_data.text SNF2_1_ERR458500_fastqc_data.txt
+scp cnm4001@aphrodite.med.cornell.edu:/home/cnm4001/angsd_hw/hw4/SNF2_1/ERR458501_fastqc/fastqc_data.txt .
+mv fastqc_data.text SNF2_1_ERR458501_fastqc_data.txt
+
+
+```
+
+## Question 2
+```{r}
+
+#' Function for parsing the text output of FastQC
+#'
+#' This functions extracts the values for a specific test run by FastQC on a
+#' single fastq file.
+#'
+#' @param file string that specifies the path to an individual FastQC result file
+#' (typically named "fastqc_data.txt"
+#' @param test Indicate which test results should be extracted. Default:
+#' "Per base sequence quality". Other options are, for example, "Per tile sequence quality",
+#' "Per sequence quality score" etc.
+#'
+#' @return data.frame with the values of a single FastQC test result.
+#'
+#' @examples \dontrun{
+#' my_result <- parse_fastqc(file = "fastqc_data.txt") 
+#' 
+
+parse_fastqc <- function(file, samplename, test = "Per base sequence quality") {
+
+  # generate the string that will be used for the file parsing
+  syscommand <- paste0("sed -n '/", test, "/,/END_MODULE/p' ", file, " | grep -v '^>>'")
+
+  # use the fread command, which can interpret UNIX commands on the fly to
+  # read in the correct portion of the FastQC result
+  fastqc_data <- data.table::fread( cmd = syscommand, header = TRUE) %>% as.data.frame
+  
+  return(fastqc_data)
+}
+
+setwd("/Users/Caden/Desktop/angsd/hw6")
+WT1_ERR458493 <-parse_fastqc(file = "WT1_ERR458493_fastqc_data.txt", test = "Per base sequence quality")
+
+```
+## Question 3
+syscommand <- paste0("sed -n '/", test, "/,/END_MODULE/p' ", file, " | grep -v '^>>'") <br/>
+
+This sed command is extracting lines in between a range of patterns <br/>
+test is the pattern at the start of the range, where test is "Per base sequence quality" but can be specified by function user <br/>
+"END_MODULE" is end pattern <br/>
+p writes the pattern space to standard output <br/>
+-n command disables automatic printing of lines that match the pattern<br/>
+
+## Question 4 & 5
+```{r}
+#' Function for parsing the text output of FastQC
+#'
+#' This functions extracts the values for a specific test run by FastQC on a
+#' single fastq file.
+#'
+#' @param file string that specifies the path to an individual FastQC result file
+#' (typically named "fastqc_data.txt"
+#' @param test Indicate which test results should be extracted. Default:
+#' "Per base sequence quality". Other options are, for example, "Per tile sequence quality",
+#' "Per sequence quality score" etc.
+#'
+#' @return data.frame with the values of a single FastQC test result.
+#'
+#' @examples \dontrun{
+#' my_result <- parse_fastqc(file = "fastqc_data.txt") 
+#' 
+
+parse_fastqc <- function(file, samplename, test = "Per base sequence quality") {
+
+  # generate the string that will be used for the file parsing
+  syscommand <- paste0("sed -n '/", test, "/,/END_MODULE/p' ", file, " | grep -v '^>>'")
+
+  # use the fread command, which can interpret UNIX commands on the fly to
+  # read in the correct portion of the FastQC result
+  fastqc_data <- data.table::fread( cmd = syscommand, header = TRUE) %>% as.data.frame
+  fastqc_data$sampleName <- samplename
+  return(fastqc_data)
+}
+
+setwd("/Users/Caden/Desktop/angsd/hw6")
+
+WT1_ERR458493 <-parse_fastqc(file = "WT1_ERR458493_fastqc_data.txt", samplename = "WT1_ERR458493", test = "Per base sequence quality")
+
+#########################Question 5##############################
+#get list of files in current directory
+rm(WT1_ERR458493)
+file_list <- list.files()
+for (file in file_list){
+  filename <- str_split_1(file, pattern = "_fastqc_data.txt")
+  assign(paste0(filename[1],"_df"),parse_fastqc(file = file, samplename = filename[1], test = "Per base sequence quality"))
+}
+
+
+```
+## Question 6
+```{r}
+```
+
+
+```{r}
+final_df <- rbind(SNF2_1_ERR458500_df,SNF2_1_ERR458501_df)
+final_df <- rbind(final_df,WT1_ERR458493_df)
+final_df <- rbind(final_df,WT1_ERR458494_df)
+
+```
+## Question 7
+```{r}
+colnames(final_df)[1]<- "Base"
+final_df[c('Condition', 'Sample')] <- str_split_fixed(final_df$sampleName, '_', 2)
+final_df <- final_df %>% 
+  mutate(Sample = str_replace(Sample,"1_", ""))
+final_df <- final_df %>% 
+  mutate(Condition = str_replace(Condition,"1", ""))
+
+ggplot(final_df, aes(x = Base, y = Mean, colour = Sample)) + facet_grid(.~Condition)+
+  geom_point(stat="identity")+ylim(0,45)
+```
+
+## Question 8
+```{r}
+sessionInfo()
+```
+

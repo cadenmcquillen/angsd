@@ -1,0 +1,113 @@
+---
+title: "HW7_Counting_Reads"
+author: "Caden McQuillen"
+date: '2023-02-23'
+output:
+  html_document:
+    toc: yes
+---
+
+## Question 1
+
+
+-M Multi-mapping reads will also be counted. For a multimapping read, all its reported alignments will be counted. 
+
+Choosing -M would increase the global total number of features counted and you would have more feature counts than the total number of reads. If you don't have many multimapping reads and have mostly uniquely mapping reads, then using -M could add noise to your downstream analysis. However if you have many multimapping reads it could be beneficial if you want to increase the percentage of your reads being used. I did not included -M however. 
+
+--minOverlap 1 (default) minimum number of overlapping bases required between a read and a meta-feature/feature that the read is assigned to
+
+I decided to keep the minOverlap at its default value because we are using SGD annotations which are fairly standard and I don't want to increase the number of reads that are not assigned to a feature. If you did increase this then less reads would be assigned to features.
+
+-Q 0 (default) The minimum mapping quality score a read must satisfy in order to be counted.
+
+I decided to keep this as default and since the alignment QC looked pretty good. However if your alignment QC isn't as good, you may want to exclude reads with poor mapping quality. 
+
+```{bash, eval = FALSE}
+#! /bin/bash -l
+
+#SBATCH --partition=angsd_class
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --job-name=Count
+#SBATCH --time=3:00:00 # HH/MM/SS
+#SBATCH --mem=20G
+
+cd /home/cnm4001/angsd_hw/hw5/STAR_BWA/STAR_alignments
+mamba activate angsd
+
+featureCounts -a /home/luce/angsd/referenceGenomes/sacCer3.sgd.gtf -o /home/cnm4001/angsd_hw/hw7/hw7_feature_counts.txt /home/luce/angsd/gierlinski/alignments/SNF2_1.Aligned.sortedByCoord.out.bam /home/luce/angsd/gierlinski/alignments/SNF2_2.Aligned.sortedByCoord.out.bam 
+/home/luce/angsd/gierlinski/alignments/SNF2_3.Aligned.sortedByCoord.out.bam 
+/home/luce/angsd/gierlinski/alignments/WT_1.Aligned.sortedByCoord.out.bam 
+/home/luce/angsd/gierlinski/alignments/WT_2.Aligned.sortedByCoord.out.bam 
+/home/luce/angsd/gierlinski/alignments/WT_3.Aligned.sortedByCoord.out.bam 
+
+#on local machine 
+scp cnm4001@aphrodite.med.cornell.edu:/home/cnm4001/angsd_hw/hw7/hw7_feature_counts.txt hw7_feature_counts.txt.summary .
+
+```
+
+## Question 2
+```{r}
+library(tidyverse)
+#counts <- read.table("/Users/Caden/Desktop/angsd/hw7_feature_counts.txt", header = TRUE) we don't need the counts for this
+my_summary <- read.table("/Users/Caden/Desktop/angsd/hw7_feature_counts.txt.summary", header = TRUE)
+example_summary <- read.table("/Users/Caden/Desktop/angsd/gierlinksi_fc.summary", header = TRUE)
+
+#get just the sample name
+sample_names <- colnames(example_summary)
+sample_names <- sample_names[-1]
+for (i in 1:length(sample_names)){
+  just_sample_name <- str_split_1(sample_names[i], "\\.")[2]
+  sample_names[i]<-just_sample_name
+}
+#change colnames
+colnames(example_summary)<- c("Status",sample_names)
+
+example_ggplot_df <- example_summary %>% pivot_longer(!Status, names_to = "Sample", values_to = "count")
+
+#get just the sample name
+sample_names <- colnames(my_summary)
+sample_names <- sample_names[-1]
+for (i in 1:length(sample_names)){
+  just_sample_name <- str_split_1(sample_names[i], "\\.")[7]
+  sample_names[i]<-just_sample_name
+}
+#change colnames
+colnames(my_summary)<- c("Status",sample_names)
+
+my_ggplot_df <- my_summary %>% pivot_longer(!Status, names_to = "Sample", values_to = "count")
+
+
+#add column for example vs my run
+example_ggplot_df$identifier  <- "In class example"
+my_ggplot_df$identifier <- "Caden's run"
+final_ggplot_df <- rbind(example_ggplot_df,my_ggplot_df )
+
+#create bar plot
+ggplot(final_ggplot_df[which(final_ggplot_df$count > 0),], aes(x = count, y = Sample, fill = Status)) + facet_grid(rows = vars(identifier))+ geom_bar(stat='identity', position = "dodge")
+
+
+
+```
+
+
+## Question 3
+The first observation is that I used the same feature count parameters as used in the example since the distribution of assigned and unassigned reads are identical. I'm guessing these are just the default parameters since that is what I used. The second observation is the SNF2 samples appear to have more assigned reads than WT samples, since these are just raw counts it could be that those samples just have more reads and thus there are higher number of assigned reads. Lastly, of unassigned reads, multimapped reads has the highest number of reads for every sample. 
+
+## Question 4
+
+```{bash, eval= FALSE}
+#copy gtf to cluster (USCS table browser mm39 GENCODE VM32)
+scp /Users/Caden/Downloads/mm39.gencodeVM32.gtf cnm4001@aphrodite.med.cornell.edu:/home/cnm4001/angsd_hw/hw7
+
+#on cluster
+cd /home/cnm4001/angsd_hw/hw7
+awk '{print $3}' mm39.gencodeVM32.gtf | sort | uniq -c
+527546 CDS
+868902 exon
+67070 start_codon
+67178 stop_codon
+
+
+```
+

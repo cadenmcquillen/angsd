@@ -1,0 +1,39 @@
+---
+title: "HW7_AlignmentQC"
+author: "Caden McQuillen"
+date: '2023-02-23'
+output:
+  html_document:
+    toc: yes
+---
+
+## Question 1
+rRNA contamination would cause an over representation of particular sequences. This would be visible in the sequence length distribution with a potential spike at the sequence lengths of rRNAs. It might also be visible in the over represented sequences, with rRNA sequences being over represented. Lastly rRNA contamination could cause a spike in GC content. 
+
+## Question 2
+```{bash, eval=FALSE}
+
+cd /home/cnm4001/angsd_hw/
+mkdir hw7
+cd hw7
+
+#get interactive session
+srun -n1 --pty --partition=angsd_class --mem=4G bash -i
+
+mamba activate qorts
+
+qorts QC \
+--generatePlots \
+--singleEnded \
+ /home/cnm4001/angsd_hw/hw5/STAR_BWA/STAR_alignments/ERR458878.Aligned.sortedByCoord.out.bam  \
+/home/luce/angsd/referenceGenomes/sacCer3.sgd.gtf  \
+/home/cnm4001/angsd_hw/hw7
+
+#on local machine
+scp cnm4001@aphrodite.med.cornell.edu:/home/cnm4001/angsd_hw/hw7/QC.multiPlot.png .
+
+```
+![Qorts QC plots-ERR458878.](/Users/Caden/Desktop/angsd/QC.multiPlot.png)
+
+## Question 3
+Since most of mRNA degradation occurs in the 5' to 3' direction, if there is mRNA degradation then many of the 5' ends will be degraded leaving a disproportionate ratio of reads mapping to the 3' end. 
