@@ -1,0 +1,90 @@
+---
+title: "scRNA-seq"
+author: "Caden McQuillen"
+date: '2023-03-16'
+output:
+  html_document:
+    toc: yes
+---
+## Libraries
+```{r, message=FALSE}
+library(SingleCellExperiment)
+library(scater)
+```
+
+
+## Read in data
+```{r}
+count_matrix <- read.table(gzfile("./WT-1.dge.txt"),sep="\t", header = TRUE, row.names = 1) 
+```
+
+## Create single cell experiment
+```{r}
+sce <- SingleCellExperiment(assays = list(counts = count_matrix))
+```
+
+##Count matrix snippet
+```{r}
+snippet <- head(sce@assays@data@listData$counts) ## or snippet <- head(assay(sce, "counts"))
+print(snippet)
+```
+
+## Number of UMIs for first 5 cells
+```{r}
+UMI_count_vector <- vector(length = 5)
+
+for(i in 1:5){
+  colSum <- sum(count_matrix[,i])
+  UMI_count_vector[i] <- colSum
+}
+ names(UMI_count_vector)<-colnames(count_matrix)[1:5]
+ print(UMI_count_vector)
+```
+
+## Genes with Non zero counts
+```{r}
+ NonZero_count_vector <- vector(length = 5)
+for(i in 1:5){
+  nonZeroGenes <- length(which(count_matrix[,i] != 0))
+  NonZero_count_vector[i] <- nonZeroGenes
+}
+names(NonZero_count_vector)<-colnames(count_matrix)[1:5]
+ print(NonZero_count_vector)
+```
+
+## Storing orginal row and col names in metadata
+```{r}
+## For demonstration purposes we will create a copy of the sce object
+sce2 <- sce
+sce2$orginal_colnames <- colnames(count_matrix)
+#store original matrix row names (aka gene names)
+rowData(sce2)$original_genenames <-  rownames(count_matrix)
+
+colData(sce2)
+rowData(sce2)
+
+```
+
+## Scater QC
+```{r}
+#add MT gene percentage
+sce <- addPerCellQC(sce, 
+    subsets=list(Mito=grep("MT-", rownames(sce))))
+#add log 10 total umi counts for each cell
+sce$log10_total_counts <- log10(colSums(count_matrix))
+#add log 10 total expressed features for each cell
+sce$log10_total_features_by_counts <- log10(colSums(count_matrix != 0))
+
+hist(sce$log10_total_counts)
+hist(sce$log10_total_features_by_counts)
+hist(sce$subsets_Mito_percent)
+##every cell here has 0% mito
+
+```
+
+The first histogram is showing the log 10 of total UMI counts for each cell. We can see that most cells have between 2.6ish to 4ish log10(total UMIs). We can see a steep drop off for log10(total UMIs) < 2.6ish which means most cells have more than that number of total UMIs. This is maybe a sign of dead cells or empty droplets rather than high quality cells since the total number of UMIs is low and there are not many cells with similar number of total UMIs. There are also very few cells with log10(total UMIs) > 4.2ish, this could possibly be "multiplets" or droplets that captured more than 1 cell. The second histogram is showing the log 10 of total expressed features for each cell. We again see a similar distribution to the first histogram where the is a sharp decrease for cells with log10(total expressed features) < 2.4ish and log10(total expressed features) > 3.7ish. These could also be signs of dead cells or doublets. The cells that are within these ranges for both metrics are probably our best guess at which cells are "high quality" \
+For the mitochondrial gene percentage, I got that every cell in this dataset has 0%. This might actually be the case since this is only 1400 total cells and I think it was mentioned in class is just a subset of a bigger experiment but it could be that I calculated it wrong too. I checked the grep indices and they were getting the mitochondrial genes ie "MT-..." and then I just fed that into the scater function so I think there just aren't any cells with < 0% mitochondrial genes.
+
+## QC Thresholds
+
+
